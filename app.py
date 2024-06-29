@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Spyder Editor
-
-This is a temporary script file.
-"""
 from flask import Flask ,jsonify
 from flask_restful import Resource , Api, reqparse, abort, request
 from flask_cors import CORS, cross_origin
@@ -24,7 +18,7 @@ valve_data_collection = db['valve_status_now']
 
 
 distance = [
-    { 'Station ID': 'station', 'distance': 0 , 'flowrate':0.00}
+    { 'Station ID': 'station', 'distance': 0 , 'flowrate':0.00, "bill": 0}
 ]
 
     
@@ -46,7 +40,7 @@ def HouseValveStatus():
     valve_data_collection.update_one(query3,updt3)
     z = valve_data_collection.find_one(query3)
     print(z)
-    return "<h1>House 2 Process Perfectly going</h1>"
+    return "House 2 Process Perfectly going"
 
 
 @app.route('/ValveStatus')
@@ -57,7 +51,7 @@ def ValveStatus():
     valve_data_collection.update_one(query,updt)
     x = valve_data_collection.find_one(query)
     print(x)
-    return "<h1>House 1 Process Perfectly going</h1>"
+    return "House 1 Process Perfectly going"
 
 @app.route('/espvalve')
 def getvalve():
@@ -98,20 +92,25 @@ def get_distance():
     Station_id = 0
     distance_reading = request.args.get('distance')
     flowrate_reading = request.args.get('flowrate')
-    query = {'_id':Station_id}
-    updt = {"$set" : {'_id':Station_id,'distance':distance_reading,'flowrate':flowrate_reading}}
-    sensor_data_collection.update_one(query,updt)
-    return {'House ID' : Station_id, 'Tank distance':distance_reading,'flowrate':flowrate_reading}
+    bill = 200*3
+    query = {'_id': Station_id}
+    updt = {"$set": {'_id': Station_id, 'distance': distance_reading, 'flowrate': flowrate_reading, 'bill': bill}}
+    sensor_data_collection.update_one(query, updt)
+    return {'House ID': Station_id, 'Tank distance': distance_reading, 'flowrate': flowrate_reading, 'bill': bill}
 
 @app.route('/Ahousedist')
 def get_house_dist():
     Station_id = 1
     distance_reading = request.args.get('distance')
     flowrate_reading = request.args.get('flowrate')
-    query = {'_id':Station_id}
-    updt = {"$set" : {'_id':Station_id,'distance':distance_reading,'flowrate':flowrate_reading}}
-    sensor_data_collection.update_one(query,updt)
-    return {'House ID' : Station_id, 'Tank distance':distance_reading,'flowrate':flowrate_reading}
+    bill = 100*3
+    query = {'_id': Station_id}
+    updt = {"$set": {'_id': Station_id, 'distance': distance_reading, 'flowrate': flowrate_reading, 'bill': bill}}
+    sensor_data_collection.update_one(query, updt)
+    return {'House ID': Station_id, 'Tank distance': distance_reading, 'flowrate': flowrate_reading, 'bill': bill}
+
+
+
 
     
 
@@ -120,5 +119,40 @@ def add_distance():
     distance.append(request.args.get('distance'))
     return '', 204
 
+@app.route('/receipt')
+def get_receipt():
+    try:
+        house_a_data = sensor_data_collection.find_one({'_id': 0})
+        house_b_data = sensor_data_collection.find_one({'_id': 1})
 
+        if not house_a_data or not house_b_data:
+            print("errrror")
+            # Return an error response if data is not found for one or both houses.
+            print("House A Data:", house_a_data)
+            print("House B Data:", house_b_data)
+            return jsonify(error="Data not found for one or both houses."), 404
+
+        receipt_data = {
+            'name': 'TWMS ADMIN',
+            'house_a': {
+                'house_id': house_a_data['_id'],
+                'username': 'owais',
+                'tank_distance': house_a_data['distance'],
+                'flowrate': house_a_data['flowrate'],
+                'time': '2023-07-28 12:34:56',
+                'bill_amount': house_a_data['bill'],
+            },
+            'house_b': {
+                'house_id': house_b_data['_id'],
+                'tank_distance': house_b_data['distance'],
+                'flowrate': house_b_data['flowrate'],
+                'time': '2023-07-28 10:20:30',
+                'bill_amount': house_b_data['bill'],
+            }
+        }
+
+        return jsonify(receipt_data), 200
+    except Exception as e:
+        # Return an error response if any unexpected exception occurs.
+        return jsonify(error=str(e)), 500
 
